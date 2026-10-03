@@ -1,0 +1,95 @@
+{
+  "LACE baseline": {
+    "cv_roc_auc_mean": 0.6481,
+    "cv_roc_auc_std": 0.0,
+    "test": {
+      "roc_auc": 0.6646,
+      "pr_auc": 0.2626,
+      "threshold": 13.0,
+      "recall_top20": 0.3563,
+      "precision_top20": 0.2727
+    }
+  },
+  "Logistic regression": {
+    "cv_roc_auc_mean": 0.7582,
+    "cv_roc_auc_std": 0.0027,
+    "test": {
+      "roc_auc": 0.7637,
+      "pr_auc": 0.4166,
+      "brier": 0.1116,
+      "threshold": 0.2311,
+      "recall_top20": 0.4976,
+      "precision_top20": 0.3851
+    }
+  },
+  "Random forest": {
+    "cv_roc_auc_mean": 0.7478,
+    "cv_roc_auc_std": 0.0045,
+    "test": {
+      "roc_auc": 0.7495,
+      "pr_auc": 0.399,
+      "brier": 0.1645,
+      "threshold": 0.5401,
+      "recall_top20": 0.4751,
+      "precision_top20": 0.3676
+    }
+  },
+  "Gradient boosting": {
+    "cv_roc_auc_mean": 0.7478,
+    "cv_roc_auc_std": 0.0042
+  },
+  "Gradient boosting (tuned)": {
+    "cv_roc_auc_mean": 0.7541,
+    "best_params": {
+      "min_samples_leaf": 200,
+      "max_leaf_nodes": 15,
+      "max_iter": 400,
+      "max_depth": 8,
+      "learning_rate": 0.01088534267260644,
+      "l2_regularization": 5.0
+    },
+    "test": {
+      "roc_auc": 0.7592,
+      "pr_auc": 0.4113,
+      "brier": 0.1122,
+      "threshold": 0.2288,
+      "recall_top20": 0.4774,
+      "precision_top20": 0.3695
+    }
+  },
+  "selected_model": {
+    "name": "Logistic regression",
+    "reason": "tuned boosting CV gain over logistic regression = -0.0041 (< 0.02 required)"
+  },
+  "feature_importance": {
+    "primary_condition": 0.0378,
+    "prior_admissions_12m": 0.0367,
+    "charlson_index": 0.0243,
+    "discharge_disposition": 0.0229,
+    "follow_up_7d": 0.0115,
+    "ed_visits_6m": 0.0104,
+    "num_medications": 0.0069,
+    "age": 0.0037,
+    "low_hemoglobin": 0.0027,
+    "length_of_stay": 0.0026
+  },
+  "fairness_recall_by_group": {
+    "sex": {
+      "F": 0.509,
+      "M": 0.485
+    },
+    "age_band": {
+      "18-39": 0.426,
+      "40-64": 0.356,
+      "65-74": 0.477,
+      "75+": 0.655
+    },
+    "insurance": {
+      "Medicaid": 0.355,
+      "Medicare": 0.593,
+      "Private": 0.353,
+      "Self-pay": 0.244,
+      "Unknown": 0.522
+    }
+  }
+}

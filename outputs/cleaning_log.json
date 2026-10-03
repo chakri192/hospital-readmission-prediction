@@ -1,0 +1,37 @@
+[
+  {
+    "step": "duplicates",
+    "detail": "dropped duplicate encounter_id rows",
+    "rows_affected": 60
+  },
+  {
+    "step": "validation",
+    "detail": "age outside 18-110 set to missing then imputed with median",
+    "rows_affected": 8
+  },
+  {
+    "step": "validation",
+    "detail": "dropped rows with discharge before admission",
+    "rows_affected": 0
+  },
+  {
+    "step": "standardise",
+    "detail": "sex labels mapped to F/M",
+    "rows_affected": 1315
+  },
+  {
+    "step": "missing",
+    "detail": "missing insurance kept as 'Unknown' category",
+    "rows_affected": 2233
+  },
+  {
+    "step": "outliers",
+    "detail": "length_of_stay winsorised at 99th percentile (22.3 days)",
+    "rows_affected": 375
+  },
+  {
+    "step": "features",
+    "detail": "added hba1c_tested, polypharmacy, abnormal_sodium, low_hemoglobin, winter_discharge, lace_score, age_band",
+    "rows_affected": null
+  }
+]

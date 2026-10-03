@@ -1,0 +1,11 @@
+id,finding,evidence,implication
+F1,HbA1c is missing for most stays; missingness is not linked to the outcome,71% missing; readmission 15.3% if tested vs 15.4% if not,Impute with median; indicator adds little here
+F2,Target is imbalanced,15.4% of stays are readmissions,"Use ROC-AUC / PR-AUC and recall, class weights, threshold tuning"
+F3,Length of stay is right-skewed,skewness 1.42,log-transform for linear models
+F4,Discharge destination matters,Skilled nursing 26.6% vs Home 11.0% (chi-square p=2.5e-239),Include disposition; candidate for targeted handover
+F5,Prior admissions are a strong signal,0 prior: 8.4%; 3+ prior: 37.9%,Utilisation history is a key feature
+F6,Condition-specific risk,highest: Heart failure (20.9%); lowest: Hip/knee replacement (5.5%),Include primary condition
+F7,Readmitted patients take more medications,median 9 vs 7 (Mann-Whitney p=8.5e-249),Medication review is an actionable lever
+F8,Early follow-up is associated with lower readmission,12.9% with follow-up in 7 days vs 18.8% without,Association only; test causally in a pilot
+F9,Charlson index and number of diagnoses overlap,Spearman r = 0.68,Watch multicollinearity in logistic regression
+F10,Readmissions are slightly higher in winter,15.9% in Dec-Feb vs 15.2% other months,Plan extra winter capacity; monitor seasonal drift

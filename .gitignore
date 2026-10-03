@@ -1,0 +1,15 @@
+# generated data and models (re-create with run_pipeline.sh)
+data/
+models/
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+# os / editors
+.DS_Store
+.vscode/
+.idea/
+# office lock files
+~$*
