@@ -1,137 +1,139 @@
 # Predicting 30-Day Hospital Readmission Risk
 
-A Python data science project that predicts, on the day of discharge, which adult hospital patients are likely to have an unplanned readmission within 30 days. Care teams can use the scores to focus follow-up calls, early clinic visits and medication reviews on the patients who need them most.
+Predicts which hospital patients are likely to be readmitted within 30 days of going home, using information available on the day of discharge. Care teams can use the risk scores to decide who gets follow-up calls, early clinic visits, or a medication review first.
 
 Built during the **Virtual Data Science Explorer Internship (YuvaIntern)** by **V Chakradhar**.
 
-> **Data note:** this project uses **synthetic data only**. `src/generate_data.py` creates realistic but fake hospital records, deliberately including real-world problems: missing lab values, outliers, duplicate rows and inconsistent labels. No real patient information is used anywhere.
+> **Synthetic data only.** `src/generate_data.py` creates fake hospital records with the kinds of problems real data has: missing lab results, outliers, duplicate rows, and inconsistent labels. No real patient information is used.
 
----
+## Results
 
-## Internship reports
+The selected model ranks patients so that **the top 20% highest-risk patients include about half of all readmissions**, compared with about a third for LACE, a standard hospital readmission checklist.
 
-| Week | Report | Topic |
-|---|---|---|
-| 1 | [Project plan & strategy](reports/Week1_Project_Plan_Readmission.docx) | Problem, objectives, scope, methodology, 35-hour timeline, tools, risks |
-| 2 | [EDA & visualisation framework](reports/Week2_EDA_Visualization_Framework.docx) | Data types, exploration techniques, chart strategy, reporting plan |
-| 3 | [ML development & evaluation plan](reports/Week3_ML_Model_Development_Plan.docx) | Preprocessing, model selection, tuning, metrics, validation, deployment |
-| 4 | [Final report & presentation plan](reports/Week4_Final_Report_Presentation_Plan.docx) | Executive summary, insights, recommendations, communicating to non-technical stakeholders |
+| Model | Test ROC-AUC | Test PR-AUC | Readmissions caught in top 20% |
+|---|---|---|---|
+| LACE checklist (baseline) | 0.665 | 0.263 | 35.6% |
+| **Logistic regression (selected)** | **0.764** | **0.417** | **49.8%** |
+| Random forest | 0.750 | 0.399 | 47.5% |
+| Gradient boosting (tuned) | 0.759 | 0.411 | 47.7% |
 
-The reports are planning documents, and their charts are labelled mock-ups. This repository **implements** that plan. The results below come from actually running the code.
+Logistic regression was chosen because the more complex models didn't beat it by a meaningful margin, and it's easier to explain to clinicians.
 
----
+![Readmission rate by predicted risk decile](outputs/figures/07_risk_deciles.png)
 
-## Repository structure
+**Strongest predictors:** primary condition, admissions in the last 12 months, comorbidity score (Charlson index), where the patient went after discharge, whether they had a follow-up within 7 days, and recent emergency visits.
 
-```
-hospital-readmission-prediction/
-├── src/
-│   ├── generate_data.py     # synthetic EHR-style encounters (with realistic data-quality issues)
-│   ├── clean.py             # validation, de-duplication, outlier capping, feature engineering, LACE score
-│   ├── eda.py               # data-quality profile, univariate/bivariate/multivariate analysis, findings table
-│   ├── train.py             # grouped CV, 4 models, tuning, test evaluation, calibration, importance, fairness
-│   └── report_diagrams.py   # diagrams and mock-up charts used in the Word reports
-├── outputs/
-│   ├── figures/             # EDA and model evaluation charts
-│   ├── eda_findings.csv     # findings log (finding, evidence, implication)
-│   ├── metrics.json         # all CV and test metrics, selected model, fairness results
-│   └── cleaning_log.json    # every cleaning step and rows affected
-├── docs/diagrams/           # workflow diagrams from the reports
-├── reports/                 # the four weekly internship reports (.docx)
-├── run_pipeline.sh          # runs the whole pipeline end to end
-└── requirements.txt
-```
+**Key patterns in the data:**
 
-## How to run
+- 8.4% of patients with no prior admissions were readmitted, against 37.9% with 3 or more.
+- Patients discharged to a skilled nursing facility were readmitted at 26.6%, against 11.0% for those going home.
+- Heart failure had the highest readmission rate (20.9%); hip and knee replacement the lowest (5.5%).
+- A follow-up within 7 days went with fewer readmissions (12.9% vs 18.8%). That's an association, not proof it causes the drop.
 
-Requires Python 3.9 or later.
+All findings: [`outputs/eda_findings.csv`](outputs/eda_findings.csv). All metrics: [`outputs/metrics.json`](outputs/metrics.json).
+
+### Fairness
+
+The model catches readmissions at a similar rate for women (51%) and men (49%), but not across age groups (36% for ages 40–64 vs 66% for 75+) or insurance types (24% for self-pay vs 59% for Medicare). That gap would need fixing before any real use, for example with group-specific thresholds or more features for younger patients.
+
+## Setup
+
+Needs **Python 3.12 or 3.13**. The package versions are pinned so the results above reproduce exactly, and they aren't available for other Python versions.
 
 ```bash
 git clone https://github.com/chakri192/hospital-readmission-prediction.git
 cd hospital-readmission-prediction
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3.12 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-./run_pipeline.sh                                    # Windows: run the four python commands inside it
 ```
 
-The full run takes about a minute on a laptop. Results are written to `outputs/`, and the trained model to `models/readmission_model.joblib`.
+## Run
 
----
-
-## Pipeline
-
-```
-generate_data ─► clean ─► eda ─► train
- 37,752 rows     37,692    10 findings   LACE · Logistic regression · Random forest · Gradient boosting
+```bash
+./run_pipeline.sh
 ```
 
-**Cleaning** (from `outputs/cleaning_log.json`): 60 duplicate rows removed, 8 impossible ages fixed, 1,315 inconsistent sex labels standardised, 2,233 missing insurance values kept as "Unknown", and 375 extreme lengths of stay capped at the 99th percentile. Lab values are imputed *inside* the model pipeline to avoid leakage.
+This takes about a minute. It runs four steps, which you can also run on their own:
 
-**Engineered features:** LACE score, polypharmacy flag (5+ drugs), abnormal sodium, low haemoglobin, HbA1c-tested indicator and winter discharge, alongside utilisation history (prior admissions, ED visits) and the Charlson comorbidity index.
+| Step | Command | Output |
+|---|---|---|
+| 1. Generate data | `python src/generate_data.py --patients 20000 --out data/raw/encounters.csv` | 37,752 hospital stays for 20,000 patients |
+| 2. Clean | `python src/clean.py --raw data/raw/encounters.csv --out data/processed/encounters_clean.parquet` | 37,692 cleaned stays and `outputs/cleaning_log.json` |
+| 3. Explore | `python src/eda.py --data data/processed/encounters_clean.parquet` | Charts in `outputs/figures/` and `outputs/eda_findings.csv` |
+| 4. Train | `python src/train.py --data data/processed/encounters_clean.parquet` | `outputs/metrics.json`, more charts, and the model in `models/readmission_model.joblib` |
 
-**Validation design:**
-- A 15% test set, split by patient so no patient appears in both training and test. It is scored only once, at the end.
-- 5-fold `StratifiedGroupKFold` cross-validation on the remaining development set.
-- All preprocessing sits inside scikit-learn `Pipeline`s, so nothing is learned from validation folds.
-- Hyperparameters for gradient boosting are tuned with `RandomizedSearchCV`.
-- **Model selection rule:** a complex model is chosen only if it beats logistic regression by at least 0.02 cross-validated ROC-AUC.
+Use `--patients` and `--seed` in step 1 to generate a different dataset.
 
----
+### What cleaning does
 
-## Results
+- Removes 60 duplicate rows
+- Fixes 8 impossible ages
+- Standardises 1,315 inconsistent sex labels (`Female`, `female`, `F` → `F`)
+- Keeps 2,233 missing insurance values as "Unknown"
+- Caps 375 extreme lengths of stay at the 99th percentile (22.3 days)
+- Adds features: LACE score, taking 5+ medications, abnormal sodium, low haemoglobin, HbA1c tested, and winter discharge
 
-### Exploratory analysis (selected findings)
+### How models are tested
 
-| Finding | Evidence |
-|---|---|
-| Prior admissions are the strongest signal | 8.4% readmitted with 0 prior admissions vs **37.9%** with 3 or more |
-| Discharge destination matters | Skilled nursing **26.6%** vs home 11.0% (chi-square p < 0.001) |
-| Condition-specific risk | Heart failure 20.9%, hip/knee replacement 5.5% |
-| Early follow-up is associated with fewer readmissions | 12.9% with follow-up within 7 days vs 18.8% without (association, not proof of cause) |
-| Target is imbalanced | 15.4% readmitted, so accuracy alone would be misleading |
+- About 14% of stays (5,438) are held back as a test set and used only once, at the end. No patient appears in both training and test data.
+- Models are compared with 5-fold cross-validation on the rest.
+- Missing lab values are filled in during training only, so test data never influences the model.
 
-Full table: [`outputs/eda_findings.csv`](outputs/eda_findings.csv)
+## Scoring patients
 
-![Bivariate analysis](outputs/figures/03_bivariate.png)
+After running the pipeline, load the model and score cleaned records (from the project folder):
 
-### Model comparison
+```python
+import joblib
+import pandas as pd
+from src.clean import CATEGORICAL_FEATURES, NUMERIC_FEATURES
 
-| Model | CV ROC-AUC | Test ROC-AUC | Test PR-AUC | Recall in top 20% | Precision in top 20% |
-|---|---|---|---|---|---|
-| LACE baseline (clinical checklist) | 0.648 | 0.665 | 0.263 | 35.6% | 27.3% |
-| **Logistic regression (selected)** | **0.758 ± 0.003** | **0.764** | **0.417** | **49.8%** | **38.5%** |
-| Random forest | 0.748 ± 0.004 | 0.750 | 0.399 | 47.5% | 36.8% |
-| Gradient boosting (tuned) | 0.754 | 0.759 | 0.411 | 47.7% | 37.0% |
+model = joblib.load("models/readmission_model.joblib")
+patients = pd.read_parquet("data/processed/encounters_clean.parquet").head(5)
+patients["risk"] = model.predict_proba(patients[NUMERIC_FEATURES + CATEGORICAL_FEATURES])[:, 1]
+print(patients[["encounter_id", "risk"]])
+```
 
-**Logistic regression was selected.** Tuned gradient boosting did not beat it in cross-validation (a difference of -0.004), so the selection rule keeps the simpler, more explainable model. Compared with the LACE checklist, the selected model:
-- raises ROC-AUC from 0.665 to 0.764
-- catches about **half of all readmissions in the top 20% of risk scores**, compared with about a third for LACE
-- gives well-calibrated probabilities (Brier score 0.112)
+`risk` is the predicted probability of readmission within 30 days.
 
-![Risk deciles](outputs/figures/07_risk_deciles.png)
+## Internship reports
 
-![ROC and PR curves](outputs/figures/06_roc_pr.png)
+| Week | Report | Covers |
+|---|---|---|
+| 1 | [Project plan](reports/Week1_Project_Plan_Readmission.docx) | Problem, goals, scope, method, timeline, risks |
+| 2 | [EDA and visualisation](reports/Week2_EDA_Visualization_Framework.docx) | Data types, exploration methods, chart choices |
+| 3 | [Model development plan](reports/Week3_ML_Model_Development_Plan.docx) | Preprocessing, model choice, tuning, evaluation, deployment |
+| 4 | [Final report and presentation](reports/Week4_Final_Report_Presentation_Plan.docx) | Summary, insights, recommendations |
 
-### Main drivers (permutation importance)
+The reports are planning documents; their charts are illustrative mock-ups. The code in this repository carries out that plan, and the results above come from running it. To regenerate the report diagrams in `docs/diagrams/`:
 
-Primary condition, prior admissions in the last 12 months, Charlson comorbidity index, discharge disposition, follow-up within 7 days, and ED visits.
+```bash
+python src/report_diagrams.py
+```
 
-![Feature importance](outputs/figures/09_feature_importance.png)
+## Project structure
 
-### Fairness check
+```
+src/
+  generate_data.py     Creates the synthetic hospital data
+  clean.py             Cleaning and feature engineering
+  eda.py               Charts and findings
+  train.py             Model training, evaluation, fairness check
+  report_diagrams.py   Diagrams for the weekly reports
+outputs/               Results from the last run: figures, findings, metrics, cleaning log
+docs/diagrams/         Report diagrams
+reports/               The four weekly reports (.docx)
+run_pipeline.sh        Runs everything
+```
 
-Recall at the top-20% threshold is similar for women (51%) and men (49%). It differs a lot by **age band** (36% for ages 40-64 vs 66% for 75+) and by **insurance** (24% self-pay vs 59% Medicare), well beyond the 10-point target set in the plan. This is flagged as a limitation. Possible fixes are group-aware thresholds or extra features for younger patients, to be validated before any real use.
+`data/` and `models/` are created when you run the pipeline and aren't stored in the repository.
 
----
+## Limitations
 
-## Limitations and next steps
-
-- The data is synthetic, so the absolute numbers show the method working, not real clinical performance.
-- Further steps: SHAP explanations for each patient, probability calibration checks per group, temporal validation, a Streamlit dashboard, and a FastAPI scoring endpoint with drift monitoring (see the Week 3 report).
-
-## Tech stack
-
-Python · pandas · NumPy · scikit-learn · SciPy · matplotlib · seaborn · pyarrow · joblib
+- The data is synthetic, so the numbers show the method working, not real clinical accuracy.
+- The fairness gaps above would need to be closed before real use.
+- Possible next steps: explanations for each patient's score (SHAP), checking predictions over time, and a dashboard or scoring API.
 
 ## License
 
