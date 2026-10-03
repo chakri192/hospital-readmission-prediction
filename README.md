@@ -24,7 +24,7 @@ The reports are planning documents, and their charts are labelled mock-ups. This
 ## Repository structure
 
 ```
-readmission-risk-prediction/
+hospital-readmission-prediction/
 ├── src/
 │   ├── generate_data.py     # synthetic EHR-style encounters (with realistic data-quality issues)
 │   ├── clean.py             # validation, de-duplication, outlier capping, feature engineering, LACE score
@@ -47,8 +47,8 @@ readmission-risk-prediction/
 Requires Python 3.9 or later.
 
 ```bash
-git clone https://github.com/<your-username>/readmission-risk-prediction.git
-cd readmission-risk-prediction
+git clone https://github.com/chakri192/hospital-readmission-prediction.git
+cd hospital-readmission-prediction
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ./run_pipeline.sh                                    # Windows: run the four python commands inside it
